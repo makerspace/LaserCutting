@@ -1,4 +1,4 @@
-from ruida import RuidaCommand, RuidaCommunicator, MSG_ACK, MSG_ERROR
+from ruida import RuidaCommand, RuidaCommunicator, MSG_ACK, MSG_ERROR, swizzle
 from datetime import timedelta, datetime, time
 from dataclasses import dataclass
 from struct import pack
@@ -38,9 +38,9 @@ class LaserMock:
                 command = RuidaCommand.from_bytes(command)
             except ValueError as e:
                 logger.error(f"Could not convert to RuidaCommand: {e}")
-            ack, resp = self.get_response(command)  # FIXME: ack and resp must be swizzled before they are sent back
-            sock.sendto(ack, address)
-            sock.sendto(resp, address)
+            ack, resp = self.get_response(command)
+            sock.sendto(bytes([swizzle(b) for b in ack]), address)
+            sock.sendto(bytes([swizzle(b) for b in resp]), address)
 
 
 if __name__ == "__main__":
