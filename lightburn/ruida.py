@@ -1,5 +1,6 @@
 import time
 import logging
+from typing import ByteString
 from enum import Enum
 from socket import socket, AF_INET, SOCK_DGRAM
 
@@ -19,6 +20,14 @@ class RuidaCommand(Enum):
         self.bytes = value
         self.checksum = value[:2]
         self.command = value[2:]
+
+    @classmethod
+    def from_bytes(cls, b: ByteString):
+        for e in cls:
+            if e.bytes == b:
+                return e
+        else:
+            raise ValueError(f"The value does not match a value in the Enum {cls.__name__}")
 
 
 def unswizzle(b):
