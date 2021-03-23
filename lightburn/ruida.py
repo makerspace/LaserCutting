@@ -76,21 +76,21 @@ class RuidaCommunicator:
             self.sock.send(ary)
             try:
                 data = self.sock.recv(8)  # timeout raises an exception
-                d0 = data[0]
+                d0 = unswizzle(data[0])
             except Exception:
                 logger.exception("Failed to receive from socket")
                 break
             if len(data) == 0:
                 logger.warning("Received nothing (empty)")
                 break
-            if unswizzle(d0) == MSG_ERROR:
+            if d0 == MSG_ERROR:
                 logger.warning("Checksum error")
                 if retry:
                     logger.info("Retrying...")
                     time.sleep(0.5)
                 else:
                     raise IOError("Checksum error")
-            elif unswizzle(d0) == MSG_ACK:
+            elif d0 == MSG_ACK:
                 logger.debug("Received ACK")
                 break
             else:
