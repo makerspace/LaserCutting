@@ -1,8 +1,7 @@
-import time
 import logging
 from typing import ByteString
 from enum import Enum
-from socket import socket, AF_INET, SOCK_DGRAM
+from socket import socket, AF_INET, SOCK_DGRAM, timeout as SocketTimeout
 
 logger = logging.getLogger(__name__)
 
@@ -71,28 +70,29 @@ class RuidaCommunicator:
         self.sock.connect((host, dest_port))
         self.sock.settimeout(self.NETWORK_TIMEOUT * 0.001)
 
-    def send(self, ary, retry=False):
+    def send(self, cmd: RuidaCommand, retry=False):
+        self.sock.send(cmd.bytes)
         while True:
-            self.sock.send(ary)
             try:
-                data = self.sock.recv(8)  # timeout raises an exception
-                d0 = unswizzle(data[0])
-            except Exception:
-                logger.exception("Failed to receive from socket")
-                break
-            if len(data) == 0:
-                logger.warning("Received nothing (empty)")
-                break
-            if d0 == MSG_ERROR:
-                logger.warning("Checksum error")
-                if retry:
-                    logger.info("Retrying...")
-                    time.sleep(0.5)
-                else:
-                    raise IOError("Checksum error")
-            elif d0 == MSG_ACK:
-                logger.debug("Received ACK")
-                break
-            else:
-                logger.info(f"Unknown response {d0:02x}")
-                break
+                ack = bytes([unswizzle(b) for b in self.sock.recv(self.MTU)])
+            except SocketTimeout:
+                continue
+
+        if len(ack) == 0:
+            logger.warning("Received empty packet")
+            return
+
+        if ack[0] == MSG_ACK:
+            logger.debug("Received ACK")
+        elif ack[0] == MSG_ERROR:
+            logger.warning("Received error response")
+            return
+        else:
+            logger.info(f"Unknown response 0x{ack.hex()}")
+            return
+
+        try:
+            resp = bytes([unswizzle(b) for b in self.sock.recv(self.MTU)])
+        except SocketTimeout:
+            logger.error("Got no data after the ACK")
+        logger.info(f"Got response: 0x{resp.hex()}")
