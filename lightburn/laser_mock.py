@@ -38,7 +38,7 @@ class LaserMock:
                 command = RuidaCommand.from_bytes(command)
             except ValueError as e:
                 logger.error(f"Could not convert to RuidaCommand: {e}")
-            ack, resp = self.get_response(command)
+            ack, resp = self.get_response(command)  # FIXME: ack and resp must be swizzled before they are sent back
             sock.sendto(ack, address)
             sock.sendto(resp, address)
 
