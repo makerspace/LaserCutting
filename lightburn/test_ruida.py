@@ -1,5 +1,5 @@
 import unittest
-from lasercutting import swizzle, unswizzle
+from ruida import swizzle, unswizzle
 
 
 class TestSwizzling(unittest.TestCase):
