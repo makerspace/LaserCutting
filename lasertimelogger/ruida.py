@@ -73,6 +73,11 @@ class RuidaCommunicator:
         self.sock.settimeout(self.NETWORK_TIMEOUT * 0.001)
         self.host = host
 
+    def get_run_time(self):
+        resp = self.send(RuidaCommand.GET_RUN_TIME)
+        if resp:
+            return ruida_bytes_to_unsigned(resp[-5:])
+
     def send(self, cmd: RuidaCommand, retry=False):
         self.sock.send(cmd.bytes)
         # Parse data in the buffer until we get to the ACK, or it's empty
@@ -114,7 +119,7 @@ if __name__ == "__main__":
     ruida = RuidaCommunicator("localhost")
     while True:
         cmd = RuidaCommand.GET_RUN_TIME
-        resp = ruida.send(cmd)
-        if resp:
-            print(f"{cmd} -> {ruida_bytes_to_unsigned(resp[-5:])} s")
+        runtime = ruida.get_run_time()
+        if runtime:
+            print(f"{cmd} -> {runtime} s")
         time.sleep(1)
