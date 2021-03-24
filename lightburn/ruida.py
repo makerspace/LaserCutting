@@ -70,6 +70,7 @@ class RuidaCommunicator:
         self.sock.bind((self.INADDR_ANY_DOTTED, recv_port))
         self.sock.connect((host, dest_port))
         self.sock.settimeout(self.NETWORK_TIMEOUT * 0.001)
+        self.host = host
 
     def send(self, cmd: RuidaCommand, retry=False):
         self.sock.send(cmd.bytes)
@@ -79,6 +80,11 @@ class RuidaCommunicator:
                 ack = bytes([unswizzle(b) for b in self.sock.recv(self.MTU)])
             except SocketTimeout:
                 logger.error("No response was received for command")
+                return
+            except ConnectionRefusedError:
+                # https://stackoverflow.com/a/2373630/4713758
+                # If the remote server does not have the port open, we get an ICMP response
+                logger.error(f"The server at {self.host}:{self.DEST_PORT} is refusing the message")
                 return
 
             if len(ack) == 0:
@@ -107,5 +113,6 @@ if __name__ == "__main__":
     ruida = RuidaCommunicator("localhost")
     while True:
         resp = ruida.send(RuidaCommand.GET_RUN_TIME)
-        print(f"Got reponse: {resp}")
+        if resp:
+            print(f"Got reponse: {resp}")
         time.sleep(1)
