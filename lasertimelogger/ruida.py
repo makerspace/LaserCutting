@@ -2,7 +2,7 @@ import logging
 from typing import ByteString
 from struct import pack
 from enum import Enum
-from lasertime import ruidaBytesToSeconds
+from lasertime import ruida_bytes_to_unsigned
 import time
 from socket import socket, AF_INET, SOCK_DGRAM, timeout as SocketTimeout
 
@@ -113,7 +113,8 @@ class RuidaCommunicator:
 if __name__ == "__main__":
     ruida = RuidaCommunicator("localhost")
     while True:
-        resp = ruida.send(RuidaCommand.GET_RUN_TIME)
+        cmd = RuidaCommand.GET_RUN_TIME
+        resp = ruida.send(cmd)
         if resp:
-            print(f"Time: {ruidaBytesToSeconds(resp)} s")
+            print(f"{cmd} -> {ruida_bytes_to_unsigned(resp[-5:])} s")
         time.sleep(1)

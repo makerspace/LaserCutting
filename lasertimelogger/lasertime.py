@@ -31,11 +31,10 @@ def swizzle(b):
     return b
 
 
-def ruidaBytesToSeconds(data):
+def ruida_bytes_to_unsigned(data):
     seconds = 0
     i = len(data) - 1
     for byte in data:
-        byte = unswizzle(byte)
         num = int(byte)
 
         s = num * 2 ** (7 * i)
@@ -45,7 +44,7 @@ def ruidaBytesToSeconds(data):
 
 
 def getLaserTime(data):
-    laserTimeS = ruidaBytesToSeconds(data)
+    laserTimeS = ruida_bytes_to_unsigned(data)
 
     laserTimeM, laserTimeS = divmod(laserTimeS, 60)
     laserTimeH, laserTimeM = divmod(laserTimeM, 60)
