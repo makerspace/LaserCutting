@@ -1,5 +1,6 @@
 import logging
 from typing import ByteString
+from struct import pack
 from enum import Enum
 from socket import socket, AF_INET, SOCK_DGRAM, timeout as SocketTimeout
 
@@ -38,14 +39,13 @@ def unswizzle(b):
     return b
 
 
-# def check_checksum(data):
-#     sum = 0
-#     for i in bytes(data[2:]):
-#         sum += i & 0xff     # unsigned
-#     seen = ((data[0] & 0xff) << 8) + (data[1] & 0xff)
-#     if seen == sum:
-#         return data[2:]
-#     return None
+def get_checksum(msg: ByteString):
+    _sum = sum(msg[:])
+    return pack("!H", _sum & 0xFFFF)
+
+
+def command_checksum_valid(msg: ByteString):
+    return msg[:2] == get_checksum(msg[2:])
 
 
 def swizzle(b):
