@@ -15,6 +15,7 @@ class LaserMock:
     def get_response(self, command: RuidaCommand):
         if command == RuidaCommand.GET_RUN_TIME:
             runtime_seconds = int(self.runtime.total_seconds())
+            logger.debug(f"Runtime: {runtime_seconds} s")
             data_packed = ((runtime_seconds << 3) & 0x3F000000) | ((runtime_seconds << 2) & 0x003F0000) | (
                         (runtime_seconds << 1) & 0x00003F00) | (runtime_seconds & 0x0000007F)
             data_packed = pack("!q", data_packed)
@@ -36,8 +37,10 @@ class LaserMock:
                 continue
             try:
                 command = RuidaCommand.from_bytes(command)
+                print(f"Responding to {command} from {address}")
             except ValueError as e:
-                logger.error(f"Could not convert to RuidaCommand: {e}")
+                logger.error(f"Could not convert to RuidaCommand. Got {command}")
+                continue
             ack, resp = self.get_response(command)
             sock.sendto(bytes([swizzle(b) for b in ack]), address)
             sock.sendto(bytes([swizzle(b) for b in resp]), address)
@@ -45,4 +48,5 @@ class LaserMock:
 
 if __name__ == "__main__":
     lasermock = LaserMock()
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s (%(levelname)s): %(module)s[%(lineno)d]: %(message)s')
     lasermock.main()

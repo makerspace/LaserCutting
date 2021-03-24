@@ -2,6 +2,7 @@ import logging
 from typing import ByteString
 from struct import pack
 from enum import Enum
+import time
 from socket import socket, AF_INET, SOCK_DGRAM, timeout as SocketTimeout
 
 logger = logging.getLogger(__name__)
@@ -72,27 +73,39 @@ class RuidaCommunicator:
 
     def send(self, cmd: RuidaCommand, retry=False):
         self.sock.send(cmd.bytes)
+        # Parse data in the buffer until we get to the ACK, or it's empty
         while True:
             try:
                 ack = bytes([unswizzle(b) for b in self.sock.recv(self.MTU)])
             except SocketTimeout:
+                logger.error("No response was received for command")
+                return
+
+            if len(ack) == 0:
+                logger.warning("Received empty packet")
                 continue
 
-        if len(ack) == 0:
-            logger.warning("Received empty packet")
-            return
+            if ack[0] == MSG_ACK:
+                logger.debug("Received ACK")
+            elif ack[0] == MSG_ERROR:
+                logger.warning("Received error response")
+                continue
+            else:
+                logger.info(f"Unknown response 0x{ack.hex()}")
+                continue
 
-        if ack[0] == MSG_ACK:
-            logger.debug("Received ACK")
-        elif ack[0] == MSG_ERROR:
-            logger.warning("Received error response")
-            return
-        else:
-            logger.info(f"Unknown response 0x{ack.hex()}")
-            return
+            try:
+                resp = bytes([unswizzle(b) for b in self.sock.recv(self.MTU)])
+            except SocketTimeout:
+                logger.error("Got no data after the ACK")
+                continue
+            logger.info(f"Got response: 0x{resp.hex()}")
+            return resp
 
-        try:
-            resp = bytes([unswizzle(b) for b in self.sock.recv(self.MTU)])
-        except SocketTimeout:
-            logger.error("Got no data after the ACK")
-        logger.info(f"Got response: 0x{resp.hex()}")
+
+if __name__ == "__main__":
+    ruida = RuidaCommunicator("localhost")
+    while True:
+        resp = ruida.send(RuidaCommand.GET_RUN_TIME)
+        print(f"Got reponse: {resp}")
+        time.sleep(1)
