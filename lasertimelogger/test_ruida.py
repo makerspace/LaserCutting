@@ -23,7 +23,7 @@ class TestChecksum(unittest.TestCase):
         self.assertSequenceEqual(b'\x00\x03', get_checksum(b'\x01\x01\x01'))
 
     def test_check_checksum(self):
-        with open(_dir.joinpath("commands.txt")) as f:
+        with open(_dir.joinpath("..", "lightburn", "commands.txt")) as f:
             for i, r in enumerate(f.readlines()):
                 msg = bytearray.fromhex(r)
                 self.assertTrue(command_checksum_valid(msg), f"Valid checksum {i}")
