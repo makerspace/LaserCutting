@@ -15,7 +15,7 @@ MSG_ERROR = 0xCD
 
 
 class RuidaCommand(Enum):
-    GET_RUN_TIME = "890bda000411"
+    GET_RUN_TIME = "0203d4898d19"
 
     def __init__(self, value):
         value = bytearray.fromhex(value)
