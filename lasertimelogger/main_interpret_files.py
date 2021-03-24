@@ -1,4 +1,4 @@
-from ruida import unswizzle
+from ruida_core import unswizzle
 from pathlib import Path
 
 

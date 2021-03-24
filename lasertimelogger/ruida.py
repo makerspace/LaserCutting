@@ -1,27 +1,27 @@
 import logging
 from typing import ByteString
-from struct import pack
 from enum import Enum
 from lasertime import ruida_bytes_to_unsigned
 import time
+from ruida_core import get_checksum, swizzle, unswizzle
 from socket import socket, AF_INET, SOCK_DGRAM, timeout as SocketTimeout
 
 logger = logging.getLogger(__name__)
-
-MAGIC = 0x88
 
 MSG_ACK = 0xCC
 MSG_ERROR = 0xCD
 
 
 class RuidaCommand(Enum):
-    GET_RUN_TIME = "0203d4898d19"
+    GET_RUN_TIME = "da000411"
 
     def __init__(self, value):
         value = bytearray.fromhex(value)
-        self.bytes = value
-        self.checksum = value[:2]
-        self.command = value[2:]
+        data = bytes([swizzle(b) for b in value])
+        cs = get_checksum(data)
+        self.bytes = cs + data
+        self.checksum = cs
+        self.command = value
 
     @classmethod
     def from_bytes(cls, b: ByteString):
@@ -30,33 +30,6 @@ class RuidaCommand(Enum):
                 return e
         else:
             raise ValueError(f"The value does not match a value in the Enum {cls.__name__}")
-
-
-def unswizzle(b):
-    b = (b - 1) & 0xFF
-    b ^= MAGIC
-    b ^= (b >> 7) & 0xFF
-    b ^= (b << 7) & 0xFF
-    b ^= (b >> 7) & 0xFF
-    return b
-
-
-def get_checksum(msg: ByteString):
-    _sum = sum(msg[:])
-    return pack("!H", _sum & 0xFFFF)
-
-
-def command_checksum_valid(msg: ByteString):
-    return msg[:2] == get_checksum(msg[2:])
-
-
-def swizzle(b):
-    b ^= (b >> 7) & 0xFF
-    b ^= (b << 7) & 0xFF
-    b ^= (b >> 7) & 0xFF
-    b ^= MAGIC
-    b = (b + 1) & 0xFF
-    return b
 
 
 class RuidaCommunicator:

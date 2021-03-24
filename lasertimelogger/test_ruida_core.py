@@ -1,5 +1,5 @@
 import unittest
-from ruida import swizzle, unswizzle, get_checksum, command_checksum_valid
+from ruida_core import swizzle, unswizzle, get_checksum, command_checksum_valid
 from pathlib import Path
 
 
