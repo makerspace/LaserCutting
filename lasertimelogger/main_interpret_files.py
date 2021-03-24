@@ -1,16 +1,24 @@
 from ruida import unswizzle
+from pathlib import Path
 
 
-with open("commands.txt") as f1, open("responses.txt") as f2:
+TEXTFILE_DIR = Path(__file__).parent.joinpath("..", "lightburn")
+
+
+def unswizzle_data(d):
+    return bytes([unswizzle(b) for b in d])
+
+
+with open(TEXTFILE_DIR.joinpath("commands.txt")) as f1, open(TEXTFILE_DIR.joinpath("responses.txt")) as f2:
     count = 0
     while True:
         count += 1
-        command = bytearray.fromhex(f1.readline())
-        ack = bytearray.fromhex(f2.readline())
-        data = bytearray.fromhex(f2.readline())
+        command = unswizzle_data(bytearray.fromhex(f1.readline()))
+        ack = unswizzle_data(bytearray.fromhex(f2.readline()))
+        data = unswizzle_data(bytearray.fromhex(f2.readline()))
         if not (command and ack and data):
             break
         print(f"\nCount: {count}")
-        print("command: " + bytearray([unswizzle(b) for b in command]).hex())
-        print("ack:     " + bytearray([unswizzle(b) for b in ack]).hex())
-        print("data:    " + bytearray([unswizzle(b) for b in data]).hex())
+        print("command: " + command.hex())
+        print("ack:     " + ack.hex())
+        print("data:    " + data.hex())
