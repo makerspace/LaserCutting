@@ -14,6 +14,7 @@ MSG_ERROR = 0xCD
 
 class RuidaCommand(Enum):
     GET_RUN_TIME = "da000411"
+    GET_MACHINE_STATUS = "da000400"
 
     def __init__(self, value):
         value = bytearray.fromhex(value)
@@ -89,10 +90,16 @@ class RuidaCommunicator:
 
 
 if __name__ == "__main__":
-    ruida = RuidaCommunicator("localhost")
+    ruida = RuidaCommunicator("10.20.0.252")
+    #ruida = RuidaCommunicator("localhost")
     while True:
-        cmd = RuidaCommand.GET_RUN_TIME
-        runtime = ruida.get_run_time()
-        if runtime:
-            print(f"{cmd} -> {runtime} s")
+        cmd = RuidaCommand.GET_MACHINE_STATUS
+        resp = ruida.send(cmd)
+        if resp:
+            print(resp)
+        
+        #cmd = RuidaCommand.GET_RUN_TIME
+        #runtime = ruida.get_run_time()
+        #if runtime:
+            #print(f"{cmd} -> {runtime} s")
         time.sleep(1)
