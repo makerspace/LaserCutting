@@ -89,17 +89,38 @@ class RuidaCommunicator:
             return resp
 
 
+class PropertyChanged:
+    prop = None
+    changed = False
+
+    def set(self, v):
+        self.changed = self.prop != v
+        self.prop = v
+
+    def did_change(self):
+        return self.changed
+
+    def get(self):
+        return self.prop
+
+
 if __name__ == "__main__":
     ruida = RuidaCommunicator("10.20.0.252")
-    #ruida = RuidaCommunicator("localhost")
+    machine_status = PropertyChanged()
+    run_time = PropertyChanged()
+
     while True:
         cmd = RuidaCommand.GET_MACHINE_STATUS
         resp = ruida.send(cmd)
         if resp:
-            print(resp)
+            machine_status.set(resp)
+            if machine_status.did_change():
+                print(f"{cmd} -> " + "".join([f"{i:02x} " for i in resp]))
         
-        #cmd = RuidaCommand.GET_RUN_TIME
-        #runtime = ruida.get_run_time()
-        #if runtime:
-            #print(f"{cmd} -> {runtime} s")
+        cmd = RuidaCommand.GET_RUN_TIME
+        runtime = ruida.get_run_time()
+        if runtime:
+            run_time.set(runtime)
+            if run_time.did_change():
+                print(f"{cmd} -> {runtime} s")
         time.sleep(1)
