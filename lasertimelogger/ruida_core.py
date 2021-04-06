@@ -29,3 +29,15 @@ def swizzle(b):
     b ^= MAGIC
     b = (b + 1) & 0xFF
     return b
+
+
+def ruida_bytes_to_unsigned(data):
+    seconds = 0
+    i = len(data) - 1
+    for byte in data:
+        num = int(byte)
+
+        s = num * 2 ** (7 * i)
+        seconds = seconds + s
+        i = i - 1
+    return seconds

@@ -1,9 +1,8 @@
 import logging
 from typing import ByteString
 from enum import Enum
-from lasertime import ruida_bytes_to_unsigned
 import time
-from ruida_core import get_checksum, swizzle, unswizzle
+from ruida_core import get_checksum, swizzle, unswizzle, ruida_bytes_to_unsigned
 from socket import socket, AF_INET, SOCK_DGRAM, timeout as SocketTimeout
 
 logger = logging.getLogger(__name__)
