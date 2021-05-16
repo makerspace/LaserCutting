@@ -1,0 +1,84 @@
+{
+    "ScanOffsets": [
+        {
+            "LineShift": 0.20000000298023224,
+            "Speed": 50,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 0.25,
+            "Speed": 100,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 0.5,
+            "Speed": 200,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 0.699999988079071,
+            "Speed": 300,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 0.75,
+            "Speed": 400,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 0.8999999761581421,
+            "Speed": 500,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 1.100000023841858,
+            "Speed": 600,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 1.2999999523162842,
+            "Speed": 700,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 1.5,
+            "Speed": 800,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 1.600000023841858,
+            "Speed": 900,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 1.7000000476837158,
+            "Speed": 1000,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 2.049999952316284,
+            "Speed": 1200,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 2.4000000953674316,
+            "Speed": 1400,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 2.75,
+            "Speed": 1600,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 2.9000000953674316,
+            "Speed": 1800,
+            "StartAdjust": 0
+        },
+        {
+            "LineShift": 3.299999952316284,
+            "Speed": 2000,
+            "StartAdjust": 0
+        }
+    ]
+}
