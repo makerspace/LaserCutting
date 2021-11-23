@@ -108,6 +108,7 @@ if __name__ == "__main__":
     ruida = RuidaCommunicator("10.20.0.252")
     machine_status = PropertyChanged()
     run_time = PropertyChanged()
+    logging.basicConfig(format="%(asctime)s - %(module)-8s %(levelname)5s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG)
 
     while True:
         cmd = RuidaCommand.GET_MACHINE_STATUS
@@ -122,5 +123,8 @@ if __name__ == "__main__":
         if runtime:
             run_time.set(runtime)
             if run_time.did_change():
-                print(f"{cmd} -> {runtime} s")
+                minutes, seconds = divmod(runtime, 60)
+                hours, minutes = divmod(minutes, 60)
+                days, hours = divmod(hours, 24)
+                print(f"{cmd} -> {runtime} s ({days} days, {hours:2}h {minutes:2}m {seconds:2} s)")
         time.sleep(1)
