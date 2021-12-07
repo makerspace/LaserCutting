@@ -4,16 +4,31 @@ from enum import Enum
 import time
 from ruida_core import get_checksum, swizzle, unswizzle, ruida_bytes_to_unsigned
 from socket import socket, AF_INET, SOCK_DGRAM, timeout as SocketTimeout
+from multiprocessing import Process, Lock, Value
 
 logger = logging.getLogger(__name__)
 
-MSG_ACK = 0xCC
-MSG_ERROR = 0xCD
+class MSGTypes(Enum):
+    MSG_ACK = 0xCC
+    MSG_ERROR = 0xCD
+    MSG_PROPERTY = 0xDA
+    MSG_PROPERTY_QUERY = 0x00
+    MSG_PROPERTY_SET = 0x01
+    MSG_COMMAND_THRESHOLD = 0x80
 
+    def __init__(self, value):
+        self.bytes = bytes(value)
+
+class CMDTypes(Enum):
+    RUN_TIME = 0x0411
+    MACHINE_STATUS =0x0400
+
+    def __init__(self, value):
+        self.bytes = bytes(value)
 
 class RuidaCommand(Enum):
-    GET_RUN_TIME = "da000411"
-    GET_MACHINE_STATUS = "da000400"
+    GET_RUN_TIME = '{:02x}'.format(MSGTypes.MSG_PROPERTY) + '{:02x}'.format(MSGTypes.MSG_PROPERTY_QUERY) + '{:04x}'.format(CMDTypes.RUN_TIME)
+    GET_MACHINE_STATUS = '{:02x}'.format(MSGTypes.MSG_PROPERTY) + '{:02x}'.format(MSGTypes.MSG_PROPERTY_QUERY) + '{:04x}'.format(CMDTypes.MACHINE_STATUS)
 
     def __init__(self, value):
         value = bytearray.fromhex(value)
@@ -46,80 +61,94 @@ class RuidaCommunicator:
         self.sock.settimeout(self.NETWORK_TIMEOUT * 0.001)
         self.host = host
 
-    def get_run_time(self):
-        resp = self.send(RuidaCommand.GET_RUN_TIME)
-        if resp:
-            return ruida_bytes_to_unsigned(resp[-5:])
-
-    def send(self, cmd: RuidaCommand, retry=False):
+    def send(self, cmd: RuidaCommand):
         self.sock.send(cmd.bytes)
-        # Parse data in the buffer until we get to the ACK, or it's empty
-        while True:
-            try:
-                ack = bytes([unswizzle(b) for b in self.sock.recv(self.MTU)])
-            except SocketTimeout:
-                logger.error("No response was received for command")
-                return
-            except ConnectionRefusedError:
-                # https://stackoverflow.com/a/2373630/4713758
-                # If the remote server does not have the port open, we get an ICMP response
-                logger.error(f"The server at {self.host}:{self.DEST_PORT} is refusing the message")
-                return
 
-            if len(ack) == 0:
-                logger.warning("Received empty packet")
-                continue
+    def receive(self):
+        try:
+            ack = bytes([unswizzle(b) for b in self.sock.recv(self.MTU)])
+        except SocketTimeout:
+            logger.error("No new response received")
+            return
+        except ConnectionRefusedError:
+            # https://stackoverflow.com/a/2373630/4713758
+            # If the remote server does not have the port open, we get an ICMP response
+            logger.error(f"The server at {self.host}:{self.DEST_PORT} is refusing the message")
+            return
 
-            if ack[0] == MSG_ACK:
-                logger.debug("Received ACK")
-            elif ack[0] == MSG_ERROR:
-                logger.warning("Received error response")
-                continue
-            else:
-                logger.info(f"Unknown response 0x{ack.hex()}")
-                continue
+        if len(ack) == 0:
+            logger.warning("Received empty packet")
+            return
 
-            try:
-                resp = bytes([unswizzle(b) for b in self.sock.recv(self.MTU)])
-            except SocketTimeout:
-                logger.error("Got no data after the ACK")
-                continue
-            logger.info(f"Got response: 0x{resp.hex()}")
-            return resp
+        if ack[0] == MSG_ACK:
+            logger.debug("Received ACK")
+        elif ack[0] == MSG_ERROR:
+            logger.warning("Received error response")
+            return
+        else:
+            logger.info(f"Unknown response 0x{ack.hex()}")
+            return
 
+        try:
+            resp = bytes([unswizzle(b) for b in self.sock.recv(self.MTU)])
+        except SocketTimeout:
+            logger.error("Got no data after the ACK")
+            return
+        logger.info(f"Got response: 0x{resp.hex()}")
+        return resp
 
-class PropertyChanged:
-    prop = None
-    changed = False
+def server(ruida: RuidaCommunicator, received_msg_lock):
+    done = False
+    while True:
+        resp = ruida.receive() #TODO might need to improve exception handling
+        if resp == None:
+            continue
+        
+        print("recived something")
+        print(resp)
+        print(RuidaCommand.GET_RUN_TIME.value)
+        print(bytes(bytearray.fromhex(RuidaCommand.GET_RUN_TIME.value)))
+        #Check what cmd we got response for
+        received_cmd = resp[0:4]
+        print(received_cmd)
+        print(received_cmd == bytes(bytearray.fromhex(RuidaCommand.GET_RUN_TIME.value)))
+        
+        #TODO need updating
+        if received_cmd[0] == bytes(bytearray.fromhex(MSGTypes.MSG_PROPERTY)):
+            logger.info(f"Got property cmd")
+            #The response is for a command of the msg property type
+            if received_cmd[2:3] == bytes(bytearray.fromhex(CMDTypes.RUN_TIME.value)):
+                logger.info(f"Got run time cmd")
+                print("get run time")
+                runtime = ruida_bytes_to_unsigned(resp[-5:])
+                print(runtime)
+                done = True
 
-    def set(self, v):
-        self.changed = self.prop != v
-        self.prop = v
+        #Are we done? If yes change the mutex and quit
+        if done:
+            with msg_received.get_lock():
+                msg_received.value = True
+            break
 
-    def did_change(self):
-        return self.changed
+def client(ruida: RuidaCommunicator, received_msg_lock, cmd):
+    while True:
+        ruida.send(cmd)
+        print("client sleep")
+        time.sleep(5)
 
-    def get(self):
-        return self.prop
-
+        with msg_received.get_lock():
+            if msg_received.value:
+                break
 
 if __name__ == "__main__":
-    ruida = RuidaCommunicator("10.20.0.252")
-    machine_status = PropertyChanged()
-    run_time = PropertyChanged()
+    ip = "10.20.0.252"
+    cmd = RuidaCommand.GET_RUN_TIME
+    
+    ruida = RuidaCommunicator(ip)
+    msg_received = Value('i', False)
 
-    while True:
-        cmd = RuidaCommand.GET_MACHINE_STATUS
-        resp = ruida.send(cmd)
-        if resp:
-            machine_status.set(resp)
-            if machine_status.did_change():
-                print(f"{cmd} -> " + "".join([f"{i:02x} " for i in resp]))
-        
-        cmd = RuidaCommand.GET_RUN_TIME
-        runtime = ruida.get_run_time()
-        if runtime:
-            run_time.set(runtime)
-            if run_time.did_change():
-                print(f"{cmd} -> {runtime} s")
-        time.sleep(1)
+    server_process = Process(target = server, args = (ruida, msg_received))
+    server_process.start()
+
+    client_process = Process(target = client, args = (ruida, msg_received, cmd))
+    client_process.start()
