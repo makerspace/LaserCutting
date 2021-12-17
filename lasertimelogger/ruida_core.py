@@ -13,12 +13,12 @@ def unswizzle(b):
     return b
 
 
-def get_checksum(msg: ByteString):
+def get_checksum(msg):
     _sum = sum(msg[:])
     return pack("!H", _sum & 0xFFFF)
 
 
-def command_checksum_valid(msg: ByteString):
+def command_checksum_valid(msg):
     return msg[:2] == get_checksum(msg[2:])
 
 

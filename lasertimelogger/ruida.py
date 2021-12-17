@@ -9,34 +9,26 @@ from multiprocessing import Process, Lock, Value
 logger = logging.getLogger(__name__)
 
 class MSGTypes(Enum):
-    MSG_ACK = 0xCC
-    MSG_ERROR = 0xCD
-    MSG_PROPERTY = 0xDA
-    MSG_PROPERTY_QUERY = 0x00
-    MSG_PROPERTY_SET = 0x01
-    MSG_COMMAND_THRESHOLD = 0x80
-
-    def __init__(self, value):
-        self.bytes = bytes(value)
+    MSG_ACK = b'\CC'
+    MSG_ERROR = b'\CD'
+    MSG_PROPERTY = b'\DA'
+    MSG_PROPERTY_QUERY = b'\00'
+    MSG_PROPERTY_SET = b'\01'
+    MSG_COMMAND_THRESHOLD = b'\80'
 
 class CMDTypes(Enum):
-    RUN_TIME = 0x0411
-    MACHINE_STATUS =0x0400
-
-    def __init__(self, value):
-        self.bytes = bytes(value)
+    RUN_TIME = b'\0411'
+    MACHINE_STATUS = b'\0400'
 
 class RuidaCommand(Enum):
-    GET_RUN_TIME = '{:02x}'.format(MSGTypes.MSG_PROPERTY) + '{:02x}'.format(MSGTypes.MSG_PROPERTY_QUERY) + '{:04x}'.format(CMDTypes.RUN_TIME)
-    GET_MACHINE_STATUS = '{:02x}'.format(MSGTypes.MSG_PROPERTY) + '{:02x}'.format(MSGTypes.MSG_PROPERTY_QUERY) + '{:04x}'.format(CMDTypes.MACHINE_STATUS)
+    GET_RUN_TIME = b''.join([MSGTypes.MSG_PROPERTY.value, MSGTypes.MSG_PROPERTY_QUERY.value, CMDTypes.RUN_TIME.value])
+    GET_MACHINE_STATUS = b''.join([MSGTypes.MSG_PROPERTY.value, MSGTypes.MSG_PROPERTY_QUERY.value, CMDTypes.MACHINE_STATUS.value])
 
     def __init__(self, value):
-        value = bytearray.fromhex(value)
         data = bytes([swizzle(b) for b in value])
         cs = get_checksum(data)
         self.bytes = cs + data
         self.checksum = cs
-        self.command = value
 
     @classmethod
     def from_bytes(cls, b: ByteString):
@@ -100,24 +92,16 @@ class RuidaCommunicator:
 def server(ruida: RuidaCommunicator, received_msg_lock):
     done = False
     while True:
-        resp = ruida.receive() #TODO might need to improve exception handling
+        resp = ruida.receive()
         if resp == None:
             continue
+        received_cmd = resp[0:4] #The first four bytes correspond with the command that was sent
         
-        print("recived something")
-        print(resp)
-        print(RuidaCommand.GET_RUN_TIME.value)
-        print(bytes(bytearray.fromhex(RuidaCommand.GET_RUN_TIME.value)))
         #Check what cmd we got response for
-        received_cmd = resp[0:4]
-        print(received_cmd)
-        print(received_cmd == bytes(bytearray.fromhex(RuidaCommand.GET_RUN_TIME.value)))
-        
-        #TODO need updating
-        if received_cmd[0] == bytes(bytearray.fromhex(MSGTypes.MSG_PROPERTY)):
+        if received_cmd[0] == MSGTypes.MSG_PROPERTY.value:
             logger.info(f"Got property cmd")
             #The response is for a command of the msg property type
-            if received_cmd[2:3] == bytes(bytearray.fromhex(CMDTypes.RUN_TIME.value)):
+            if received_cmd[2:3] == CMDTypes.RUN_TIME.value:
                 logger.info(f"Got run time cmd")
                 print("get run time")
                 runtime = ruida_bytes_to_unsigned(resp[-5:])
@@ -133,8 +117,7 @@ def server(ruida: RuidaCommunicator, received_msg_lock):
 def client(ruida: RuidaCommunicator, received_msg_lock, cmd):
     while True:
         ruida.send(cmd)
-        print("client sleep")
-        time.sleep(5)
+        time.sleep(60)
 
         with msg_received.get_lock():
             if msg_received.value:
