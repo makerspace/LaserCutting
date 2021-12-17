@@ -103,9 +103,13 @@ def server(ruida: RuidaCommunicator, received_msg_lock):
             #The response is for a command of the msg property type
             if received_cmd[2:3] == CMDTypes.RUN_TIME.value:
                 logger.info(f"Got run time cmd")
-                print("get run time")
                 runtime = ruida_bytes_to_unsigned(resp[-5:])
-                print(runtime)
+
+                minutes, seconds = divmod(runtime, 60)
+                hours, minutes = divmod(minutes, 60)
+                days, hours = divmod(hours, 24)
+                print(f"{cmd} -> {runtime} s ({days} days, {hours:2}h {minutes:2}m {seconds:2} s)")
+
                 done = True
 
         #Are we done? If yes change the mutex and quit
@@ -126,6 +130,8 @@ def client(ruida: RuidaCommunicator, received_msg_lock, cmd):
 if __name__ == "__main__":
     ip = "10.20.0.252"
     cmd = RuidaCommand.GET_RUN_TIME
+    
+    logging.basicConfig(format="%(asctime)s - %(module)-8s %(levelname)5s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG)
     
     ruida = RuidaCommunicator(ip)
     msg_received = Value('i', False)
